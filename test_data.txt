@@ -1,0 +1,63 @@
+S 0 0 0 0 15
+S 0 1 6 0 15
+S 0 2 6 0 15
+S 0 3 6 0 15
+S 0 4 6 0 15
+S 0 5 6 0 15
+S 0 6 6 0 15
+S 0 7 6 0 15
+S 0 8 6 0 15
+S 0 9 6 0 15
+S 0 10 6 0 15
+S 0 11 6 0 15
+S 0 12 6 0 15
+S 0 13 6 0 15
+S 0 14 6 0 15
+S 0 15 6 42 57
+S 0 14 6 0 15
+S 0 13 6 0 15
+S 0 12 6 0 15
+S 0 11 6 0 15
+S 0 10 6 0 15
+S 0 9 6 0 15
+S 0 8 6 0 15
+S 0 7 6 0 15
+S 0 6 6 0 15
+S 0 5 6 0 15
+S 0 4 6 0 15
+S 0 3 6 0 15
+S 0 2 6 0 15
+S 0 1 6 0 15
+S 0 0 6 0 15
+L all 0 14
+L en_route 15 29
+L all 30 30
+U nen_route 15 15
+D 0
+A 0
+
+Customers = []
+
+if line[:3] == 'CUS':
+    Customers.append(spracujZakaznika(line))
+
+if line[:3] == 'TRA':
+    Transactions.append(spracujTransakciu(line))
+    
+
+CUS Adam Cervenka 192879182739 kuchtasteiner@gmail.com +08309485304 
+TRA 00983249303 [0948304982093, 987893274982, 872948273984] predaj
+TRA 00983249303 [0948304982093, 987893274982, 872948273984] predaj
+TRA 00983249303 [0948304982093, 987893274982, 872948273984] predaj
+TRA 00983249303 [0948304982093, 987893274982, 872948273984] predaj
+CUS Adam Cervenka 192879182739 kuchtasteiner@gmail.com +08309485304 
+CUS Adam Cervenka 192879182739 kuchtasteiner@gmail.com +08309485304
+CUS Adam Cervenka 192879182739 kuchtasteiner@gmail.com +08309485304 
+CUS Adam Cervenka 192879182739 kuchtasteiner@gmail.com +08309485304 
+jansdoas odmoiajsd naosijd 
+
+Totot su data z prveho tyzdna. Lol. 
+Na toto by som sa mal pozriet. 
+CUS Adam Cervenka 192879182739 kuchtasteiner@gmail.com +08309485304 
+CUS Adam Cervenka 192879182739 kuchtasteiner@gmail.com +08309485304 
+CUS Adam Cervenka 192879182739 kuchtasteiner@gmail.com +08309485304 

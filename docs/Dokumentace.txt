@@ -1,0 +1,300 @@
+Dokumentácia
+
+1) Anotácia 
+
+	Úlohou programu je overovať riešenie problému s poštou (viac info v časti Presné zadanie) - pre danú sadu áut a ich trasy overí, či autá zabezpečia doručenie vsetkých listov do 24 hodín od ich podania na pošte. Program tento problém rieši diskrétnou simuláciou v potrebnej dĺžke.
+
+2) Presné zadanie 
+
+	Napíšte program, ktorý bude overovať riešenie nasledujúceho problému:
+	
+		Země "Z" sestává z 1024 měst ležících ve vrcholech čtvercové sítě 32x32 měst.
+		
+		Vaším úkolem je navrhnout způsob, jak v zemi "Z" doručovat poštu, aby byly splněny následující požadavky:
+			- listy se podávají i vyzvedávají na poště.
+			- v každém městě je jedna pošta.
+			- mezi městy listy převážejí poštovní auta.
+			- cesta mezi dvěma sousedními městy trvá 6 minut.
+			- zastávka, při které jsou nakládány a vykládány listy, trvá 15 minut.
+			- list k naložení musí být přítomen nejpozději 15 minut před odjezdem auta.
+			- vyložený list si bude moci adresát převzít 15 minut po příjezdu auta.
+			- v případě překládání listu z auta do auta stačí 15 minut na jeho naložení i vyložení.
+			- každý list musí být doručen nejpozději 24 hodin po podání.
+
+		zdroj: https://ksvi.mff.cuni.cz/~holan/posta.html
+
+3) Zvolený algoritmus 
+	
+	V riešení je použitý algoritmus pre diskrétnu simuláciu s obmedzením vstupu na autá s cyklickými trasami (aby bolo jasné ako dlho simulovať a prípadne či simulácia nebude trvať príliš dlho). 
+
+	Simuláciu riadi model, ktorý na začiatku vytvorí procesy - autá, ktoré potom cez model plánujú udalosti do kalendára. Autá sa presúvajú po svojej predvolenej trase a podľa zadaných pravidiel nakladajú a vykladajú listy. Úspešne doručené listy zahadzujú, expirované listy sa ukladajú na pošte, aby se potom našli pri kontrole na konci simulácie, kedy model prejde všetky autá a pošty a skontroloje či sa tam nenachádzajú nejaké listy po expirácii. Ak sa na konci nenájde žiadny list po expirácií, riešenie je prehlásené za úspešné. Vstup je ďalej obmedzený maximálnym počtom áut (max 1023), pretože minimálne také riešenie je už známe. 
+
+4) Diskusia výberu algoritmu 
+
+	K riešeniu by sa dalo pristupovať aj pomocou BFS a v každý moment vytvárať na každej pošte list do každej ďalej pošty, čo by ale bolo patrične výpočtovo náročné a neefektívne. Tento prístup nebol ďalej preskúmavaný. 
+
+	Riešenie pomocou diskrétnej simulácie je priamočiare a pomerne efektívne, pretože nie je nutné simulovať každý list v kazdej chvíli.
+
+5) Program
+
+	významné triedy: 
+		Udalost
+			- určuje ju Kdy - int, čas udalosti, Kdo - Auto, inštancia auta, ktorá udalosť zpracuje a Co - TypUdalosti, čo sa vlastne stalo 
+
+		Kalendar
+			-metódy:
+				-Pridej - triviálne pridá novú Udalost do zoznamu
+				-VyberPrvni - vráti prvú Udalost z kalendára zoradeného podľa času 
+
+		Posta
+			-atribúty:
+				-ID - typu Point, určuje pozíciu pošty
+				-dopisy - slovník s listami, kľúčom je destinácia listu a hodnota určuje dobu expirácie
+				-pritomne_auta - reprezentuje slovník s autami, ktoré sú práve na tejto pošte, kľúčom je inštancia auta a hodnotou je doba jeho odchodu, využíva sa pre prenos listu z auta do auta 
+
+		Zastavka 
+			-atribúty:
+				-ID - typu Point, určujú pozíciu (x,y) zastávky
+				-prichod - v minútach určuje dobu príchodu auta relatívne k aktuálnemu času - napr. v úvode simulácie je napr. model.cas == 5 a keď má auto nastavený príchod na 10, znamená to, že príchod auta sa naplánuje na model.cas == 15
+				-odchod - obdobne určuje odchod, započítava sa do toho aj doba čakania
+
+		Auto
+			-atribúty:
+				-ID - string, primárne pre debug účely
+				-trasa - typu List<Zastavka>, reprezentuje trasu auta, všetky jeho Zastávky s časmi príchodu a odchodu 
+				-policies - zoznam pravidiel pre nakladanie a vykladanie reprezentovaných ako stringy, obsahujúci rozsah indexov na trase, pre ktorú sú platné 
+				-CoNakladat - zoznam aktuálne platných pravidiel pre nakladanie
+				-CoVykladat - zoznam aktuálne platných pravidiel pre vykladanie 
+				-naklad - reprezentovaný ako slovník, kde kľúčom je destinácia listu a hodnota je čas expirácie listu, reprezentuje vždy iba najstarší list do danej destinácie 
+				-cislo_zastavky - určuje aktuálny index na trase 
+				-aktualny_index - určuje aktuálny index v model.zoznam_post
+		
+			-metódy:
+				-private void NastavAktualnePolicies() - podľa aktuálneho čísla zastávky (teda indexu na trase) nastavií aktuálne platné pravidlá pre nakladanie a vykladanie listov
+				
+				-private void ZpracujNakladovuPolicy (string policy) - spracúva pravidlá pre nakladanie listov - xlc, xsc, xec, xlx, xex, xsx a ich y verzie, bližšie detaily v časti Policies 
+				
+				-private void ZpracujVykladovuPolicy(string policy) - spracúva pravidlá pre vykladanie listov - xlc, xsc, xec, xlx, xex, xsx a ich y verzie
+				
+				-private void VytvorDopisyPreXYPolicy(string policy) - funkcia pre vytvorenie listov podľa pravidiel - xlc, xsc, xec, xlx, xex, xsx a ich y verzie
+
+				-private void NalozDopisy() - vykonaj všetky aktuálne platné pravidlá pre nakladanie listov
+				
+				-private void VylozDopisUrcenyDoaktuálnehoMesta() - vylož list do aktuálneho mesta (ak je po expiracii), alebo naňho zabudni, pretože je úspešne doručený 
+				
+				-private void VylozDopisy() - vykona všetky aktuálne platné pravidlá pre vykladanie listov
+				
+				-public void Zpracuj(Udalost ud) - spracuje aktuálnu udalosť 
+					-case TypUdalosti.VytvorDopisy - vytvorí listy na aktuálnej pošte do destinácie, ktoré bude auto nakladať, tak aby ich auto nestihlo naložiť a naplánuje udalosť ZacinaPrekladatDopisy
+
+					-case TypUdalosti.ZacinaPrekladatDopisy - auto sa posunie na nasledujúcu zastávku na svojej trase, nahlási svoju prítomnosť do objektu pošty, notifikuje ostatné autá na pošte a spustí u nich znovu nakladací proces, aktualizuje si pravidlá pre nakladanie a vykladanie listov podľa aktuálneho indexu na svojej trase, vykoná náklad, vyloží list do tejto destinácie, vyloží všetky listy podľa aktuálnych pravidiel pre vykladanie a naplánuje ďalšiu udalosť VytvorDopisy
+
+					-case TypUdalosti.DodatocnyNakladZInehoAuta - v prípade, že do aktuálnej pošty prišlo ďalšie auto, môžem od neho prečerpat listy, ak spolu budeme ešte aspoň 15 minút v meste
+
+					-case TypUdalosti.OdhlasSaZPosty - auto odchádza z mesta, teda vymaže sa zo zoznamu áut na aktuálnej pošte 
+
+		Model 
+			-atribúty:
+				-public int cas - aktuálny čas simulácie 
+				
+				-private int dokdySimulovat - hodnota spočítaná funkciou SpocitajCasSimulace, určuje čas dokedy ma zmysel simulovať, teda čas, dokedy sa vsetko začne opakovať 
+				
+				-private List<Auto> zoznam_aut - zoznam áut pre kontrolu expirovaných listov 
+				
+				-private List<Posta> zoznam_post - zoznam pôšt pre kontrolu expirovaných listov 
+				
+				-string cesta_k_vstupnim_datam - relatívna cesta ku vstupným dátam 
+				
+				-private Kalendar kalendar - kalendár modelu 
+			
+			-metódy:
+				-public void Naplanuj(Udalost ud) - pridá ud do kalendára 
+
+				-public void VytvorPostyADopisy() - vytvorí všetky inštancie pôšt a listov v nich 
+				
+				-public void VytvorProcesy() - vytvorí všetky procesy - teda autá, nastaví im trasy, delay a pravidlá pre nakladanie a vykladanie listov 
+				
+				-public bool SkontrolujDopisy() - po skončení simulácie prejde všetky pošty a autá a skontroluje či sa tam nenachádza list po expirácii
+				
+				-private int SpocitajCasSimulace() - spočíta čas dokedy má zmysel simulovať - najmenší spoločný násobok periód všetkých áut + 1440 minút (24h) 
+				
+				-private bool SkontrolujValidituTras() - skontroluje či vstupné dáta neobsahujú invalidné trasy - maximálna rýchlosť, ktorou sa dá presunúť mezdi dvoma susednými poštami je 6 minút
+
+				-public bool Vypocet() - samotný výpočet simulácie, inicializuje čas, kalendár, vykoná všetky potrebné kontroly a v prípade úspechu, začne simuláciu, podľa výsledku vracia bool a výsledok vypíše aj do Consoly 
+ 
+6) Alternatívne programové riešenie 
+
+	Listy by sa dali reprezentovat napr. aj ako zoznam objektov, alebo tuplov a prehadzovať ich medzi autami a poštami, ale to nie je efektívne. Reprezentácia najstarších listov pomocou slovníku, kde kľúč je destinácia typu Point a hodnota je čas expirácie typu int je omnoho efektívnejšia. 
+
+7) Reprezentácia vstupních dát a ich príprava
+
+	Policies - vo všeobecnosti pravidlá pre nakladanie a vykladanie listov
+
+	-policies sú pravidlá, podľa ktorých sa auto riadi pri nakladaní, resp. vykladaní listov, filozofia riešenia je taká, že pre čo najväčšiu flexibilitu sú k dispozícii tzv. atomické policies - programové inštrukcie pre autá: 
+
+	-xlx, xex, xsx, yly, yey, ysy
+
+	-a pre komfort sú pripravené policies vyššej úrovne: 
+		-xlc, xec, xsc, ylc, yec, ysc
+		-ale hlavne en_route, nen_route, all
+
+	-príklad formátu policy stringu zo vstupných dát - "L xlc 1 10" - L reprezentuje LOADING, teda nakladanie, xlc znamená, že súradnica X listu je je Larger than Current (xlc), 1 10 - sú inkluzívne indexy na trase, pre ktoré sa toto pravidlo aplikuje 
+	
+	-ďalší príklad "U nen_route 16 16" - U reprezentuje unloading, nen_route - je negácia en_route, a teda sú to všetky pošty, ktoré sa nenachádzajú na trase aktuálneho auta počnúc od aktuálneho indexu na trase, 16 16 - určuje len jednu konkrétnu poštu na indexe 16 v trase auta - vo výsledku sa teda na pošte, ktorá leží na indexe 16 na trase daného auta vyložia všetky listy adresované do miest, ktoré neležia na zatiaľ neprejdenej časti trasy daného auta 
+
+	-pre atomickú kontrolu existujú dynamické policies z kategórie xlx, xex, ysy, ...
+
+	-xlx15 - všetky listy s destináciou s x-ovou súradnicou väčšou ako 15
+	-yey5  - všetky listy s destináciou s y-ovou súradnicou rovnou 5
+	-ysy31 - všetky listy s destináciou s y-ovou súradnicou menšou ako 31
+
+	-pravidlá sa dajú ľubovoľne kombinovať a teda pre daný index môže naraz platiť pravidlo yey5, ale súčasne aj xlx15, čím dostávame velmi detailnú kontrolu v každom úseku trasy
+
+	-nakladajú sa vždy len neexpirované listy
+	-expirované listy sa ale vykladajú
+
+	Prehľad všetkých pravidiel:
+		-xlxX, xlxXX - kde X je nahradené číslom 0-9, všetky listy s destináciou s x-ovou súradnicou väčšou ako XX / resp. X
+		-xsxX, xsxXX - kde X je nahradené číslom 0-9, všetky listy s destináciou s x-ovou súradnicou menšou ako XX / resp. X
+		-xexX, xexXX - kde X je nahradené číslom 0-9, všetky listy s destináciou s x-ovou súradnicou rovnou ako XX / resp. X
+		-ylyX, ylyXX - kde X je nahradené číslom 0-9, všetky listy s destináciou s y-ovou súradnicou väčšou ako XX / resp. X
+		-ysyX, ysyXX - kde X je nahradené číslom 0-9, všetky listy s destináciou s y-ovou súradnicou menšou ako XX / resp. X
+		-yeyX, yeyXX - kde X je nahradené číslom 0-9, všetky listy s destináciou s y-ovou súradnicou rovnou ako XX / resp. X
+		-xlc - všetky listy s destináciou s x-ovou súradnicou väčšou ako je x-ova súradnica aktuálnej pošty
+		-xsc - všetky listy s destináciou s x-ovou súradnicou menšou ako je x-ova súradnica aktuálnej pošty
+		-xec - všetky listy s destináciou s x-ovou súradnicou rovnou x-ovej súradnicy aktuálnej pošty
+		-ylc - všetky listy s destináciou s y-ovou súradnicou väčšou ako je y-ova súradnica aktuálnej pošty
+		-ysc - všetky listy s destináciou s y-ovou súradnicou menšou ako je y-ova súradnica aktuálnej pošty
+		-yec - všetky listy s destináciou s y-ovou súradnicou rovnou y-ovej súradnicy aktuálnej pošty
+		-en_route - všetky listy, určené do pôšt, ktoré sa nachádzajú v zatiaľ neprejdenej časti trasy auta, teda ich index na trase je väčší ako cislo_zastavky, k dispozícii len ako pravidlo pre nakladanie listov 
+		-nen_route - negácia en_route, k dispozicii len ako pravidlo pre vykladanie listov 
+		-all - všetky listy, k dispozicii len ako pravidlo pre nakladanie listov 
+
+	Vstupné dáta - formát 
+
+		-na začiatok, ukážka:
+
+		S 0 0 0 0 15
+		S 0 1 6 0 15
+		S 0 2 6 0 15
+		S 0 3 6 0 15
+		S 0 4 6 0 15
+		S 0 5 6 0 15
+		S 0 6 6 0 15
+		S 0 7 6 0 15
+		S 0 8 6 0 15
+		S 0 9 6 0 15
+		S 0 10 6 0 15
+		S 0 11 6 0 15
+		S 0 12 6 0 15
+		S 0 13 6 0 15
+		S 0 14 6 0 15
+		S 0 15 6 42 57
+		S 0 14 6 0 15
+		S 0 13 6 0 15
+		S 0 12 6 0 15
+		S 0 11 6 0 15
+		S 0 10 6 0 15
+		S 0 9 6 0 15
+		S 0 8 6 0 15
+		S 0 7 6 0 15
+		S 0 6 6 0 15
+		S 0 5 6 0 15
+		S 0 4 6 0 15
+		S 0 3 6 0 15
+		S 0 2 6 0 15
+		S 0 1 6 0 15
+		S 0 0 6 0 15
+		L all 0 14
+		L en_route 15 29
+		L all 30 30
+		U nen_route 15 15
+		D 0
+		A 0
+
+		-každý riadok vstupných dát reprezentuje údaj príslušný k prvému Autu, na ktoré sa pri sekvenčnom čítaní vstupu narazí. V tomto prípade je vytvorené posledným riadkom A 0 - Auto s indexom 0, ku ktorému prislúcha všetko čo mu predchádza. 
+
+		S 0 1 6 0 15 - znamená STOP, teda zastávka S, so súradnicami (0,1), s príchodom auta +6 minút k aktuálnemu model.cas a čakaním 0 + 15 minut k model.cas, kde 0 reprezentuje čakanie na danej zastávke 
+
+		L all 0 14 - znamená LOADING, teda pravidlo pre nakladanie, all - nákladová policy pre všetky listy, 0 14 - označuje platnosť na inkluzívnych indexoch 0 až 14 
+
+		U nen_route 15 15 - znamená UNLOADING, teda pravidlo pre vykladanie, nen_route - policy pre vykladanie listov do destinácií, ktoré neležia pozdĺž trasy, ktorú má ešte auto pred sebou, 15 15 - určuje index na trase, pre ktoré pravidlo platí, v tomto prípade je to len index 15 
+
+		D 0 - znamená DELAY, teda oneskorenie, s ktorým má auto vyštartovať na svoju trasu, umožňuje pohodlné vytváranie viacerých časovo rôzne rozostúpenych inštancií áut, ktoré jazdia na rovnakej trase 
+
+		A 0 - Auto s indexom 0 
+
+		-poradie riadkov zastávok musí zodpovedať poradiu na trase, poradie riadkov L / U / D, nie je striktne určené, L/U riadkov môže byť ľubovoľne veľa a je možné ich ľubovoľne kombinovať, D riadok musí byť len jeden a A riadok je vždy posledný a uzatvára všetky predošlé riadky - tie budú definovať auto s týmto indexom 
+
+		-vstupný súbor teda obsahuje postupnosť takýchto sekvencií, kde každá sekvencia popisuje jedno auto 
+
+		-veľmi pohodlný prístup je vytvárať tento súbor nejakým programom
+		
+		-riešenie obsahuje súbor input_generation_example.py, ktorý generuje jedno možné riešenie - autá chodiace po vertikálnych trasách s prekladacími autami uprosted, ktoré zabezpečujú transfer medzi rôznymi stĺpcami 
+
+		-súbor test_data.txt obsahuje príklad kompletných vstupných dát 
+
+8) Reprezentácia výstupných dát a ich interpretácia
+
+	Program môže končiť úspechom - príklad úspešného behu:
+
+		Predpokladana dlouzka simulace je v poradku.
+		Probiha simulace, prosim cekejte.
+		Dopisy po expiraci na poste: 0
+		Dopisy po expiraci v autach: 0
+		Reseni je korektne. Gratulujeme.
+
+	Alternatívne, môze skončiť jednou z niekolkých chýb, ktoré sú vypísané do konzoly: 
+
+		príklady: 
+
+			-nastane, keď se pri kontrole na pošte alebo v aute nájde list po expirácii 
+
+			Chyba: Na poste (0, 1) je dopis po expiraci. Destinace dopisu: (31,31). Expirace: 1738
+			Chyba: V aute 234 je dopis po expiraci. Destinace dopisu: (31,31). Expirace: 1738
+			Reseni neni korektne. Je nam to lito.
+
+			-nastane, keď se kontrolou zistí, že trasa nemôže byť prejdená na základe pravidiel
+
+			problem - da sa presuvat najviac o 1 policko v x / y suradnici za 6 minut
+
+			Chyba: Trasy nie su validne.
+
+			-pre prehladnosť sa vypíše aj konkrétne ID auta a zastávky, medzi ktorými je problém 
+
+			Auto 237 nema validnu trasu. Problem je mezi zastavkami (0,1) a (2,3).
+			
+			-maximálny čas simulácie je empiricky stanovený na 200 000, pre trpezlivých používateľov. Ak je tento čas prekročený (počíta sa ako najmenší spoločný deliteľ periód všetkých áut + 1440, pre dobehnutie všetkych listov, ktoré by pri vzájomne posunutých, ale rovnakých periódach mohli byť ešte na ceste)
+
+			Chyba: Simulace bude trvat prilis dlouho.
+
+			-nakoľko existuje známe riešenie, počet áut je limitovaný na max. 1023
+			
+			Chyba: Prilis mnoho aut. Problem jde vyresit i s 1023 autami.
+
+9) Priebeh prác v chronologickom poradí 
+
+	-príprava a úvodné, neskôr niekoľkokrát iterované, premyslenie vstupu 
+	-základný skelet simulácie - udalost, kalendar, auto, model 
+	-generovanie pôšt
+	-generovanie listov 
+	-ujasnenie si mechaniky simuláce pomocou Q&A samého so sebou (ukázalo sa ako skvelá technika pre programovanie komplikovanejších programov)
+	-presuny áut 
+	-prekladanie listov
+	-generovanie listov spôsobené prejazdom auta 
+	-pravidlá pre vykladanie a nakladanie
+	-kontrolné mechanizmy simulácie - trasy, čas
+	-debugging
+	-debugging
+	-úprava vstupu 
+	-dynamické pravidlá pre vykladanie a nakladanie 
+	-transfer listov medzi autami 
+	-dokumentácia (okrem tej priebežnej v komentároch)
+
+10) Čo nebolo dokončené
+
+	-určite by sa dali implementovať komplexnejšie riadiace policies, napr. Q1 - Q4, pre selekciu listu podľa kvadrantu destinácie a pod. 
+
+11) Záver
+
+	Ukázalo sa, ako som predpokladal, že to bude zaujímavý problém so zaujímavým riešením. Diskrétnu simuláciu som predtým neprogramoval a je to určite užitočný nástroj v mojom toolbelte. Pomerne dosť interagujúcich komponentov vie celkom ľahko vytvoriť chaos, resp. vytvoriť priestor pre pomerne prácny debugging a hlboké zamýšľanie sa. 

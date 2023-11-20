@@ -1,0 +1,69 @@
+Q&A - done 
+
+	kto bude generovat dopisy, kedy a ake? 
+		-auto povie modelu nech 14m pred prichodom do mesta naplanuje generovanie novych listov na nasledujucej zastavke na trase s destinaciami podla loading policy
+
+	kto spracuje generovanie novych listov? 
+		-prislusna posta - naklad.Add(new Dopis)
+
+	kedy budeme kontrolovat preexpirovane listy? 
+		-na konci simulace 
+
+	kto ich bude kontrolovat? 
+		-model, pretoze ma seznam post a seznam aut
+
+	aky je cas vytvorenie dopisu na zaciatku? 
+
+		cas = delay + trasa[cislo_zastavky].odchod +  trasa[cislo_zastavky+1].prichod + trasa[cislo_zastavky+1].odchod - 14
+
+	aky je cas na vytvorenie dopisu neskor? 
+
+		cas = model.cas + trasa[cislo_zastavky].odchod +  trasa[cislo_zastavky+1].prichod + trasa[cislo_zastavky+1].odchod - 14
+
+	kedy a ako sa ukonci simulacia? 
+		-while cyklus vo vypocte bude kontrolovat ci cas nedosiahol cas_simulace
+
+	ako bude auto opakovat trasu? 
+		-pri planovani nasledujucej zastavky bude kontrolovat ci je cislo_zastavky + 1 == trasa.Length, ak ano, tak to znamena, ze je opat na zaciatku, po naplanovani nastavi cislo_zastavky na 0
+
+	co bude robit auto a v akom poradi? 
+		-vygeneruje nove listy, naplanuje naklad novych dopisov
+		-presunie sa do noveho mesta, kde nalozi a vylozi dopisy, naplanuje generovanie novych dopisov
+
+	ako kontrolovat trasu? 
+		-pre kazdu dvojicu po sebe iducich zastavok skontrolovat ci cas odchodu a cas prichodu je (abs(x1-x2) + abs(y1-y2)) * 6, inak napis, ze trasa je invalidna a vypis problemove auta a zastavky
+
+	ako spocitam cas simulace? 
+		-ako najmensi spolocny nasobok period vsetkych aut + 1440 minut - auta totiz sice mozu mat rovnaku periodu, ale mozu byt navzajom shiftnute, najviac vsak o <1440 minut 
+
+	ako zistim periody aut? 
+		-trasy musia byt cyklicke, takze sa pozriem kedy auto zacina, kedy konci - mam periodu, to urobim pre vsetky auta
+
+	upravit expiraciu dopisov - doplnit na model.cas + 1425
+
+	dopisy musim na zacatku vytvorit vsude 
+		-inicializovat postu so zoznam dopisu do kazdeho mesta 
+
+	ako implementovat junction_vertical / horizontal?
+
+	ako kontrolovat dorucenie dopisov na konci?
+		-pri vcasnom doruceni sa dopis zmaze, inak sa necha na poste
+		-kontroluje sa ci v nejakom aute alebo na poste nie je dopis po expiracii
+		-dopis pred expiraciou nie je problem
+
+	ake loading / unloading policies mozu byt?
+			-stejne x / y
+			-stejny kvadrat
+			-x / y vacsi / mensi ako nieco 
+			-na trase pred sebou / za sebou 
+
+	ako budem riesit presun listov medzi autami v rovnakom meste?
+		-ak su v meste dve auta naraz dopis sa da prelozit za 15 minut 
+		-mozem si na poste ukladat zoznam aktualne pritomnych aut?
+
+		auto1 nalozi a vylozi dopisy t0 - neobsahuje dopisy z auta2 
+		auto2 nalozi a vylozi dopisy t0 - obsahuje aj dopisy z auta1
+			-pozrie sa ake auta su prihlasene na aktualnej poste 
+			-pre kazde prihlasene auto naplanuje 
+
+	dokumentacia
